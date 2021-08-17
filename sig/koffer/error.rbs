@@ -1,0 +1,4 @@
+module Koffer
+  class Error < StandardError
+  end
+end

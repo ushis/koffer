@@ -16,3 +16,6 @@ jobs:
       run: bundle exec rubocop
     - name: RSpec
       run: bundle exec rspec
+      env:
+        RBS_TEST_TARGET: "Koffer::*"
+        RUBYOPT: "-rbundler/setup -rrbs/test/setup"

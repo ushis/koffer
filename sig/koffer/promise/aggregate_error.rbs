@@ -1,0 +1,9 @@
+
+module Koffer
+  class Promise[Value]
+    class AggregateError < Error
+      def initialize: (?String, ?errors: Array[Exception]) -> void
+      def errors: -> Array[Exception]
+    end
+  end
+end

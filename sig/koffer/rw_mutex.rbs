@@ -1,0 +1,12 @@
+module Koffer
+  class RWMutex
+    def initialize: -> void
+    def rlock: -> void
+    def runlock: -> void
+    def rsync: [A] () { () -> A } -> A
+    def lock: -> void
+    def unlock: -> void
+    def sync: [A] () { () -> A } -> A
+    def inspect: -> String
+  end
+end

@@ -1,0 +1,3 @@
+module Koffer
+  VERSION: String
+end
