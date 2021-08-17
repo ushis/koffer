@@ -1,0 +1,6 @@
+module Koffer
+  class Channel[A]
+    class ClosedError < Error
+    end
+  end
+end

@@ -1,0 +1,10 @@
+module Koffer
+  class Channel[A]
+    def initialize: -> void
+    def push: (A) -> void
+    def pop: -> A?
+    def each: { (A) -> void } -> void
+    def close: (?block: bool) -> void
+    def closed?: -> bool
+  end
+end

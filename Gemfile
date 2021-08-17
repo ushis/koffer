@@ -6,6 +6,7 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'irb', require: false
+gem 'rbs', require: false
 gem 'rspec', require: false
 gem 'rubocop', require: false
 gem 'rubocop-performance', require: false

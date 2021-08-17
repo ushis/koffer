@@ -1,0 +1,12 @@
+module Koffer
+  class Channel[A]
+    class Queue[B]
+      def initialize: -> void
+      def push: (B) -> void
+      def pop: -> B?
+      def head: -> B?
+      def tail: -> B?
+      def empty?: -> bool
+    end
+  end
+end

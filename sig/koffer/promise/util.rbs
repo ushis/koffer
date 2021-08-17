@@ -1,0 +1,12 @@
+module Koffer
+  class Promise[Value]
+    module Util
+      def resolve: (?top) -> Promise
+      def reject: (Exception) -> Promise
+      def all: (Array[Promise]) -> Promise
+      def any: (Array[Promise]) -> Promise
+      def all_settled: (Array[Promise]) -> Promise
+      def race: (Array[Promise]) -> Promise
+    end
+  end
+end

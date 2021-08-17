@@ -6,8 +6,11 @@ module Koffer
   class Promise
     extend Util
 
+    attr_reader :value, :reason, :state
+
     def initialize
       @value = nil
+      @reason = nil
       @state = :pending
       @callbacks = { then: [], rescue: [], finally: [] }.freeze
       @mutex = ::Thread::Mutex.new
@@ -15,12 +18,12 @@ module Koffer
     end
 
     def resolve(value = nil)
-      finalize(value, :resolved)
+      finalize(value, nil, :resolved)
       self
     end
 
     def reject(reason)
-      finalize(reason, :rejected)
+      finalize(nil, reason, :rejected)
       self
     end
 
@@ -45,43 +48,32 @@ module Koffer
     def await
       @mutex.synchronize do
         @queue.wait(@mutex) while @state == :pending
-        raise(@value) if @state == :rejected
+        raise(@reason) if @state == :rejected
 
         @value
       end
     end
 
-    def value
-      @mutex.synchronize { @value if @state == :resolved }
-    end
-
-    def reason
-      @mutex.synchronize { @value if @state == :rejected }
-    end
-
-    def state
-      @mutex.synchronize { @state }
-    end
-
     def pending?
-      @mutex.synchronize { @state == :pending }
+      @state == :pending
     end
 
     def resolved?
-      @mutex.synchronize { @state == :resolved }
+      @state == :resolved
     end
 
     def rejected?
-      @mutex.synchronize { @state == :rejected }
+      @state == :rejected
     end
 
     private
 
-    def finalize(value, state)
+    def finalize(value, reason, state)
       @mutex.synchronize do
         return if @state != :pending
 
         @value = value
+        @reason = reason
         @state = state
         freeze
         @queue.broadcast
@@ -110,20 +102,20 @@ module Koffer
     end
 
     def run_resolver(promise)
-      @state == :resolved ? promise.resolve(yield(@value)) : promise.reject(@value)
+      @state == :resolved ? promise.resolve(yield(@value)) : promise.reject(@reason)
     rescue ::StandardError => e
       promise.reject(e)
     end
 
     def run_rescuer(promise)
-      @state == :resolved ? promise.resolve(@value) : promise.resolve(yield(@value))
+      @state == :resolved ? promise.resolve(@value) : promise.resolve(yield(@reason))
     rescue ::StandardError => e
       promise.reject(e)
     end
 
     def run_finalizer(promise)
       yield
-      @state == :resolved ? promise.resolve(@value) : promise.reject(@value)
+      @state == :resolved ? promise.resolve(@value) : promise.reject(@reason)
     rescue ::StandardError => e
       promise.reject(e)
     end

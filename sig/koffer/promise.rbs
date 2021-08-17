@@ -1,0 +1,19 @@
+module Koffer
+  class Promise[A]
+    extend Util
+
+    def initialize: -> void
+    def resolve: (?A) -> Promise[A]
+    def reject: (Exception) -> Promise[nil]
+    def then: [B] () { (A) -> B } -> Promise[B]
+    def rescue: [B] () { (Exception) -> B } -> Promise[B]
+    def finally: () { -> void } -> Promise
+    def await: -> A
+    def value: -> A?
+    def reason: -> Exception?
+    def state: -> (:pending | :resolved | :rejected)
+    def pending?: -> bool
+    def resolved?: -> bool
+    def rejected?: -> bool
+  end
+end

@@ -5,7 +5,7 @@ require_relative './aggregate_error'
 module Koffer
   class Promise
     module Util
-      def resolve(value)
+      def resolve(value = nil)
         Promise.new.resolve(value)
       end
 

@@ -15,6 +15,7 @@ GEM
     parser (3.0.2.0)
       ast (~> 2.4.1)
     rainbow (3.0.0)
+    rbs (1.3.3)
     regexp_parser (2.1.1)
     reline (0.2.7)
       io-console (~> 0.5)
@@ -58,6 +59,7 @@ PLATFORMS
 DEPENDENCIES
   irb
   koffer!
+  rbs
   rspec
   rubocop
   rubocop-performance
