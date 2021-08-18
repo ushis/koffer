@@ -15,8 +15,6 @@ module Koffer
     def rlock
       @mutex.synchronize do
         @r_wait += 1
-        # As soon as at least one writer is waiting for the lock, we do not provide locks to
-        # readers immediately anymore to avoid writer starvation.
         @r_queue.wait(@mutex) if @w_wait > 0
         @r_queue.wait(@mutex) while @w_count > 0
         @r_count += 1
@@ -26,13 +24,10 @@ module Koffer
 
     def runlock
       @mutex.synchronize do
+        raise(::ThreadError, 'Attempt to unlock a mutex which is not locked') if @r_count < 1
+
         @r_count -= 1
-        raise(ThreadError, 'Attempt to unlock a mutex which is not locked') if @r_count < 0
-
-        return if @r_count > 0
-
-        @w_queue.signal
-        @r_queue.broadcast
+        @w_queue.signal if @r_count == 0
       end
     end
 
@@ -57,9 +52,9 @@ module Koffer
 
     def unlock
       @mutex.synchronize do
-        @w_count -= 1
-        raise(ThreadError, 'Attempt to unlock a mutex which is not locked') if @w_count < 0
+        raise(::ThreadError, 'Attempt to unlock a mutex which is not locked') if @w_count < 1
 
+        @w_count -= 1
         @r_queue.broadcast
         @w_queue.signal
       end

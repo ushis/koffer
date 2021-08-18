@@ -6,82 +6,80 @@ module Koffer
   class Promise
     extend Util
 
+    attr_reader :value, :reason, :state
+
     def initialize
       @value = nil
+      @reason = nil
       @state = :pending
-      @callbacks = { then: [], rescue: [], finally: [] }.freeze
+      @resolvers = []
+      @rescuers = []
+      @finalizers = []
       @mutex = ::Thread::Mutex.new
       @queue = ::Thread::ConditionVariable.new
     end
 
     def resolve(value = nil)
-      finalize(value, :resolved)
+      settle(value, nil, :resolved)
       self
     end
 
     def reject(reason)
-      finalize(reason, :rejected)
+      settle(nil, reason, :rejected)
       self
     end
 
     def then(&block)
       promise = Promise.new
-      add_callback(:then, promise, &block) || run_resolver(promise, &block)
+      add_callback(@resolvers, promise, &block) || run_resolver(promise, &block)
       promise
     end
 
     def rescue(&block)
       promise = Promise.new
-      add_callback(:rescue, promise, &block) || run_rescuer(promise, &block)
+      add_callback(@rescuers, promise, &block) || run_rescuer(promise, &block)
       promise
     end
 
     def finally(&block)
       promise = Promise.new
-      add_callback(:finally, promise, &block) || run_finalizer(promise, &block)
+      add_callback(@finalizers, promise, &block) || run_finalizer(promise, &block)
       promise
     end
 
     def await
       @mutex.synchronize do
         @queue.wait(@mutex) while @state == :pending
-        raise(@value) if @state == :rejected
+        raise(@reason) if @state == :rejected
 
         @value
       end
     end
 
-    def value
-      @mutex.synchronize { @value if @state == :resolved }
-    end
-
-    def reason
-      @mutex.synchronize { @value if @state == :rejected }
-    end
-
-    def state
-      @mutex.synchronize { @state }
-    end
-
     def pending?
-      @mutex.synchronize { @state == :pending }
+      @state == :pending
+    end
+
+    def settled?
+      @state != :pending
     end
 
     def resolved?
-      @mutex.synchronize { @state == :resolved }
+      @state == :resolved
     end
 
     def rejected?
-      @mutex.synchronize { @state == :rejected }
+      @state == :rejected
     end
 
     private
 
-    def finalize(value, state)
+    def settle(value, reason, state)
       @mutex.synchronize do
         return if @state != :pending
 
         @value = value
+        @reason = reason
         @state = state
         freeze
         @queue.broadcast
@@ -91,39 +89,41 @@ module Koffer
     end
 
     def freeze
-      @callbacks.each(&:freeze)
+      @resolvers.freeze
+      @rescuers.freeze
+      @finalizers.freeze
       super
     end
 
-    def add_callback(name, promise, &block)
+    def add_callback(chain, promise, &block)
       @mutex.synchronize do
         return false unless @state == :pending
 
-        @callbacks[name].push([promise, block])
+        chain.push([promise, block])
       end
     end
 
     def run_callbacks
-      @callbacks[:then].each { |(promise, block)| run_resolver(promise, &block) }
-      @callbacks[:rescue].each { |(promise, block)| run_rescuer(promise, &block) }
-      @callbacks[:finally].each { |(promise, block)| run_finalizer(promise, &block) }
+      @resolvers.each { |(promise, block)| run_resolver(promise, &block) }
+      @rescuers.each { |(promise, block)| run_rescuer(promise, &block) }
+      @finalizers.each { |(promise, block)| run_finalizer(promise, &block) }
     end
 
     def run_resolver(promise)
-      @state == :resolved ? promise.resolve(yield(@value)) : promise.reject(@value)
+      @state == :resolved ? promise.resolve(yield(@value)) : promise.reject(@reason)
     rescue ::StandardError => e
       promise.reject(e)
     end
 
     def run_rescuer(promise)
-      @state == :resolved ? promise.resolve(@value) : promise.resolve(yield(@value))
+      @state == :resolved ? promise.resolve(@value) : promise.resolve(yield(@reason))
     rescue ::StandardError => e
       promise.reject(e)
     end
 
     def run_finalizer(promise)
       yield
-      @state == :resolved ? promise.resolve(@value) : promise.reject(@value)
+      @state == :resolved ? promise.resolve(@value) : promise.reject(@reason)
     rescue ::StandardError => e
       promise.reject(e)
     end
