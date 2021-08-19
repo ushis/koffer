@@ -6,7 +6,7 @@
   describe '#close' do
     subject(:trace) { [] }
 
-    context 'with blocking enabled' do
+    context 'with blocking enabled and pending push' do
       before do
         run do
           schedule { trace << [:push, channel.push(1)] }
@@ -30,7 +30,22 @@
       it { is_expected.to eq([[:pop, 1], [:pop, nil], [:push_2_failed], [:push, 1], [:close]]) }
     end
 
-    context 'with blocking disabled and unread values' do
+    context 'with blocking enabled and pending pop' do
+      before do
+        run do
+          schedule { trace << [:pop, channel.pop] }
+
+          schedule do
+            channel.close
+            trace << [:close]
+          end
+        end
+      end
+
+      it { is_expected.to eq([[:close], [:pop, nil]]) }
+    end
+
+    context 'with blocking disabled and unread pushes' do
       before do
         run do
           schedule do

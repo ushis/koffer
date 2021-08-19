@@ -80,6 +80,7 @@ module Koffer
     def close_blocking
       promise, = @mutex.synchronize do
         @closed = true
+        @condition.broadcast
         @queue.tail
       end
 
